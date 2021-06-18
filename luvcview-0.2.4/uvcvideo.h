@@ -50,7 +50,7 @@ struct uvc_xu_control_mapping {
 
 	__u8 size;
 	__u8 offset;
-	enum v4l2_ctrl_type v4l2_type;
+	enum v4l2_ctrl_type* v4l2_type;
 	enum uvc_control_data_type data_type;
 };
 

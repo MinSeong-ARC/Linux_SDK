@@ -29,11 +29,12 @@
 #include <sys/file.h>
 #include <string.h>
 #include <pthread.h>
-#include <SDL/SDL.h>
-#include <SDL/SDL_thread.h>
-#include <SDL/SDL_audio.h>
-#include <SDL/SDL_timer.h>
+//#include <SDL/SDL.h>
+//#include <SDL/SDL_thread.h>
+//#include <SDL/SDL_audio.h>
+//#include <SDL/SDL_timer.h>
 #include <linux/videodev.h>
+#include <linux/videodev2.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <errno.h>
@@ -42,7 +43,7 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <X11/Xlib.h>
-#include <SDL/SDL_syswm.h>
+//#include <SDL/SDL_syswm.h>
 #include "v4l2uvc.h"
 #include "gui.h"
 #include "utils.h"
@@ -54,6 +55,62 @@
 #define FROM_FIXED(X) (((Sint32)(X))>>(FIXED_BITS))
 
 #define INCPANTILT 64 // 1°
+
+
+
+
+
+#ifndef _TICK_TIME_
+#define _TICK_TIME_
+ 
+#if defined(WIN32) || defined(WIN64)
+#include <windows.h>
+#else
+#include <time.h>
+#endif
+ 
+typedef unsigned long long int tick64_t;
+typedef unsigned long int tick32_t;
+ 
+tick32_t get_tick_count()
+{
+    tick32_t tick = 0ul;
+ 
+#if defined(WIN32) || defined(WIN64)
+    tick = GetTickCount();
+#else
+    struct timespec tp;
+ 
+    clock_gettime(CLOCK_MONOTONIC, &tp);
+ 
+    tick = (tp.tv_sec*1000ul) + (tp.tv_nsec/1000ul/1000ul);
+#endif
+ 
+    return tick;
+}
+ 
+tick64_t get_tick_count64()
+{
+    tick64_t tick = 0ull;
+ 
+#if defined(WIN32) || defined(WIN64)
+    tick = GetTickCount64();
+#else
+    struct timespec tp;
+ 
+    clock_gettime(CLOCK_MONOTONIC, &tp);
+ 
+    tick = (tp.tv_sec*1000ull) + (tp.tv_nsec/1000ull/1000ull);
+#endif
+ 
+    return tick;
+}
+ 
+#endif // _TICK_TIME_
+
+
+
+
 
 typedef enum action_gui {
 /* 0..7..15 action top */
@@ -105,12 +162,12 @@ typedef struct act_title {
 	char * title;
 } act_title;
 
-typedef struct key_action_t {
+/* typedef struct key_action_t {
     SDLKey key;
     action_gui action;
-} key_action_t;
+} key_action_t; */
 
-key_action_t keyaction[] = {
+/* key_action_t keyaction[] = {
     {SDLK_n, A_BRIGHTNESS_UP},
     {SDLK_b, A_BRIGHTNESS_DOWN},
     {SDLK_x, A_CONTRAST_UP},
@@ -133,8 +190,8 @@ key_action_t keyaction[] = {
     {SDLK_i, A_CAPTURE_STREAM},
     {SDLK_j, A_CAPTURE_FRAMESTREAM},
     {SDLK_F1, A_SAVE},
-    {SDLK_F2, A_LOAD}    
-};
+    {SDLK_F2, A_LOAD}     
+};*/
 act_title title_act[A_LAST] ={
 /* 0..7..15 action top */
    { A_BRIGHTNESS_UP,"Brightness Up"},
@@ -182,39 +239,41 @@ static const char version[] = VERSION;
 struct vdIn *videoIn;
 
 /* Translates screen coordinates into buttons */
-action_gui
+/* action_gui
 GUI_whichbutton(int x, int y, SDL_Surface * pscreen, struct vdIn *videoIn);
 
-action_gui GUI_keytoaction(SDLKey key);
+action_gui GUI_keytoaction(SDLKey key); */
 
 struct pt_data {
-    SDL_Surface **ptscreen;
+    /* SDL_Surface **ptscreen;
     SDL_Event *ptsdlevent;
-    SDL_Rect *drect;
+    SDL_Rect *drect; */
     struct vdIn *ptvideoIn;
     unsigned char frmrate;
-    SDL_mutex *affmutex;
+    pthread_mutex_t affmutex;
 } ptdata;
 
-static int eventThread(void *data);
-static Uint32 SDL_VIDEO_Flags =
-    SDL_ANYFORMAT | SDL_DOUBLEBUF | SDL_RESIZABLE;
+static void* eventThread(void *data);
+/* static uint32_t SDL_VIDEO_Flags =
+    SDL_ANYFORMAT | SDL_DOUBLEBUF | SDL_RESIZABLE; */
     
 
 int main(int argc, char *argv[])
 {
-	const SDL_VideoInfo *info;
+	/*const SDL_VideoInfo *info;
 	char driver[128];
 	SDL_Surface *pscreen;
 	SDL_Overlay *overlay;
 	SDL_Rect drect;
 	SDL_Event sdlevent;
 	SDL_Thread *mythread;
-	SDL_mutex *affmutex;
+	SDL_mutex *affmutex; */
+	pthread_mutex_t affmutex;
+	pthread_t mythread;
 
 	int status;
-	Uint32 currtime;
-	Uint32 lasttime;
+	uint32_t currtime;
+	uint32_t lasttime;
 	unsigned char *p = NULL;
 	int hwaccel = 0;
 	const char *videodevice = NULL;
@@ -359,10 +418,10 @@ int main(int argc, char *argv[])
 	}
 
 	/************* Test SDL capabilities ************/
-	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+	/* if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		fprintf(stderr, "Couldn't initialize SDL: %s\n", SDL_GetError());
 		exit(1);
-	}
+	} */
 
 	/* For this version, we'll be save and disable hardware acceleration */
 	if(hwaccel)
@@ -370,23 +429,23 @@ int main(int argc, char *argv[])
 			putenv("SDL_VIDEO_YUV_HWACCEL=0");
 		}
 
-	printf("SDL information:\n");
+	/* printf("SDL information:\n");
 	if (SDL_VideoDriverName(driver, sizeof(driver))) {
 		printf("  Video driver: %s\n", driver);
 	}
-	info = SDL_GetVideoInfo();
+	info = SDL_GetVideoInfo(); */
 
-	if (info->wm_available) {
+	/* if (info->wm_available) {
 		printf("  A window manager is available\n");
 	}
 	if (info->hw_available) {
 		printf("  Hardware surfaces are available (%dk video memory)\n",
 				info->video_mem);
-		SDL_VIDEO_Flags |= SDL_HWSURFACE;
+		//SDL_VIDEO_Flags |= SDL_HWSURFACE;
 	}
 	if (info->blit_hw) {
 		printf("  Copy blits between hardware surfaces are accelerated\n");
-		SDL_VIDEO_Flags |= SDL_ASYNCBLIT;
+		//SDL_VIDEO_Flags |= SDL_ASYNCBLIT;
 	}
 	if (info->blit_hw_CC) {
 		printf
@@ -409,10 +468,10 @@ int main(int argc, char *argv[])
 	}
 	if (info->blit_fill) {
 		printf("  Color fills on hardware surfaces are accelerated\n");
-	}
+	} */
 
-	if (!(SDL_VIDEO_Flags & SDL_HWSURFACE))
-		SDL_VIDEO_Flags |= SDL_SWSURFACE;
+	/* if (!(SDL_VIDEO_Flags & SDL_HWSURFACE))
+		SDL_VIDEO_Flags |= SDL_SWSURFACE; */
 
 	if (videodevice == NULL || *videodevice == 0) {
 		videodevice = "/dev/video0";
@@ -425,9 +484,9 @@ int main(int argc, char *argv[])
 	videoIn = (struct vdIn *) calloc(1, sizeof(struct vdIn));
 	if ( queryformats ) {
 		/* if we're supposed to list the video formats, do that now and go out */
-		check_videoIn(videoIn,(char *) videodevice);
+		//check_videoIn(videoIn,(char *) videodevice);
 		free(videoIn);
-		SDL_Quit();
+		//SDL_Quit();
 		exit(1);
 	}
 	if (init_videoIn
@@ -442,18 +501,18 @@ int main(int argc, char *argv[])
 	if ( readconfigfile )
 		load_controls(videoIn->fd);
 
-	pscreen =
+	/* pscreen =
 		SDL_SetVideoMode(videoIn->width, videoIn->height + 32, 0,
-				SDL_VIDEO_Flags);
+				SDL_VIDEO_Flags); */
 
-	overlay =
+	/* overlay =
 		SDL_CreateYUVOverlay(videoIn->width, videoIn->height + 32,
-				SDL_YUY2_OVERLAY, pscreen);
-	p = (unsigned char *) overlay->pixels[0];
+				SDL_YUY2_OVERLAY, pscreen); */
+	/* p = (unsigned char *) overlay->pixels[0];
 	drect.x = 0;
 	drect.y = 0;
 	drect.w = pscreen->w;
-	drect.h = pscreen->h;
+	drect.h = pscreen->h; */
 	if (enableRawStreamCapture) {
 		videoIn->captureFile = fopen("stream.raw", "wb");
 		if(videoIn->captureFile == NULL) {
@@ -465,24 +524,25 @@ int main(int argc, char *argv[])
 	if (enableRawFrameCapture)
 		videoIn->rawFrameCapture = enableRawFrameCapture;
 	initLut();
-	SDL_WM_SetCaption(title_act[A_VIDEO].title, NULL);
-	lasttime = SDL_GetTicks();
+	//SDL_WM_SetCaption(title_act[A_VIDEO].title, NULL);
+	lasttime = get_tick_count();
 	creatButt(videoIn->width, 32);
-	SDL_LockYUVOverlay(overlay);
+	//SDL_LockYUVOverlay(overlay);
 	memcpy(p + (videoIn->width * (videoIn->height) * 2), YUYVbutt,
 			videoIn->width * 64);
-	SDL_UnlockYUVOverlay(overlay);
+	//SDL_UnlockYUVOverlay(overlay);
 	/* initialize thread data */
-	ptdata.ptscreen = &pscreen;
+	//ptdata.ptscreen = &pscreen;
 	ptdata.ptvideoIn = videoIn;
-	ptdata.ptsdlevent = &sdlevent;
-	ptdata.drect = &drect;
-	affmutex = SDL_CreateMutex();
+	//ptdata.ptsdlevent = &sdlevent;
+	//ptdata.drect = &drect;
+	pthread_mutex_init(&affmutex, NULL);//affmutex = SDL_CreateMutex();
 	ptdata.affmutex = affmutex;
-	mythread = SDL_CreateThread(eventThread, (void *) &ptdata);
+	//mythread = SDL_CreateThread(eventThread, (void *) &ptdata);
+	pthread_create(&mythread, NULL, eventThread, (void*)&ptdata);
 	/* main big loop */
 	while (videoIn->signalquit) {
-		currtime = SDL_GetTicks();
+		currtime = get_tick_count();
 		if (currtime - lasttime > 0) {
 			frmrate = 1000/(currtime - lasttime);
 		}
@@ -496,16 +556,16 @@ int main(int argc, char *argv[])
 		if (videoIn->toggleAvi)
 			printf("\rframe rate: %d     ",frmrate);
 
-		SDL_LockYUVOverlay(overlay);
+		/* SDL_LockYUVOverlay(overlay);
 		memcpy(p, videoIn->framebuffer,
 				videoIn->width * (videoIn->height) * 2);
 		SDL_UnlockYUVOverlay(overlay);
-		SDL_DisplayYUVOverlay(overlay, &drect);
+		SDL_DisplayYUVOverlay(overlay, &drect); */
 
 		if (videoIn->getPict) { 
 			switch(videoIn->formatIn){
 				case V4L2_PIX_FMT_MJPEG:
-					get_picture(videoIn->tmpbuffer,videoIn->buf.bytesused);
+					get_picture(videoIn->tmpbuffer,videoIn->buf->bytesused);
 					break;
 				case V4L2_PIX_FMT_YUYV:
 					get_pictureYV2(videoIn->framebuffer,videoIn->width,videoIn->height);
@@ -517,15 +577,15 @@ int main(int argc, char *argv[])
 			printf("get picture !\n");
 		}
 
-		SDL_LockMutex(affmutex);
+		pthread_mutex_lock(&affmutex);//SDL_LockMutex(affmutex);
 		ptdata.frmrate = frmrate;
-		SDL_WM_SetCaption(videoIn->status, NULL);
-		SDL_UnlockMutex(affmutex);
-		SDL_Delay(10);
+		//SDL_WM_SetCaption(videoIn->status, NULL);
+		pthread_mutex_unlock(&affmutex);//SDL_UnlockMutex(affmutex);
+		usleep(10);//SDL_Delay(10);
 
 	}
-	SDL_WaitThread(mythread, &status);
-	SDL_DestroyMutex(affmutex);
+	pthread_join(mythread, NULL);//SDL_WaitThread(mythread, &status);
+	pthread_mutex_destroy(&affmutex);//SDL_DestroyMutex(affmutex);
 
 	/* if avifile is defined, we made a video: compute the exact fps and
 	   set it in the video */
@@ -542,10 +602,11 @@ int main(int argc, char *argv[])
 	destroyButt();
 	freeLut();
 	printf("Cleanup done. Exiting ...\n");
-	SDL_Quit();
+	//SDL_Quit();
 }
 
-action_gui
+#if 0
+ action_gui
 GUI_whichbutton(int x, int y, SDL_Surface * pscreen, struct vdIn *videoIn)
 {
     int nbutton, retval;
@@ -573,16 +634,17 @@ action_gui GUI_keytoaction(SDLKey key)
 
 	return (A_VIDEO);
 }
+#endif
 
-static int eventThread(void *data)
+static void* eventThread(void *data)
 {
 	struct pt_data *gdata = (struct pt_data *) data;
 	struct v4l2_control control;
-	SDL_Surface *pscreen = *gdata->ptscreen;
+	//SDL_Surface *pscreen = *gdata->ptscreen;
 	struct vdIn *videoIn = gdata->ptvideoIn;
-	SDL_Event *sdlevent = gdata->ptsdlevent;
-	SDL_Rect *drect = gdata->drect;
-	SDL_mutex *affmutex = gdata->affmutex;
+	//SDL_Event *sdlevent = gdata->ptsdlevent;
+	//SDL_Rect *drect = gdata->drect;
+	pthread_mutex_t affmutex = gdata->affmutex;//SDL_mutex *affmutex = gdata->affmutex;
 	unsigned char frmrate;
 	int x, y;
 	int mouseon = 0;
@@ -592,9 +654,9 @@ static int eventThread(void *data)
 	int boucle = 0;
 	action_gui curr_action = A_VIDEO;
 	while (videoIn->signalquit) {
-		SDL_LockMutex(affmutex);
+		pthread_mutex_lock(&affmutex);//SDL_LockMutex(affmutex);
 		frmrate = gdata->frmrate;
-		while (SDL_PollEvent(sdlevent)) {	//scan the event queue
+		/* while (SDL_PollEvent(sdlevent)) {	//scan the event queue
 			switch (sdlevent->type) {
 				case SDL_KEYUP:
 				case SDL_MOUSEBUTTONUP:
@@ -626,8 +688,8 @@ static int eventThread(void *data)
 					videoIn->signalquit = 0;
 					break;
 			}
-		}			//end if poll
-		SDL_UnlockMutex(affmutex);
+		}	*/		//end if poll
+		pthread_mutex_unlock(&affmutex);//SDL_UnlockMutex(affmutex);
 		/* traiter les actions */
 		value = 0;
 		if (mouseon){
@@ -676,16 +738,16 @@ static int eventThread(void *data)
 						printf("Set Tilt down error\n");
 					break;
 				case A_PAN_RESET:
-					if (v4l2ResetPan(videoIn) < 0)
-						printf("Reset pan error\n");
+					/* if (v4l2ResetPan(videoIn) < 0)
+						printf("Reset pan error\n"); */
 					break;
 				case A_TILT_RESET:
-					if (v4l2ResetTilt(videoIn) < 0)
-						printf("Reset tilt error\n");
+					/* if (v4l2ResetTilt(videoIn) < 0)
+						printf("Reset tilt error\n"); */
 					break;
 
 				case A_SCREENSHOT:
-					SDL_Delay(200);
+					usleep(200);//SDL_Delay(200);
 					videoIn->getPict = 1;
 					value = 1;
 					break;
@@ -733,15 +795,15 @@ static int eventThread(void *data)
 						printf("Set Gamma down error\n");
 					break;   
 				case A_RECORD_TOGGLE:
-					SDL_Delay(200);
+					usleep(200);//SDL_Delay(200);
 					videoIn->toggleAvi = !videoIn->toggleAvi;
 					value = videoIn->toggleAvi;
 					if ( value == 1 ) {
 						printf("avi recording started\n");
-						videoIn->recordstart=SDL_GetTicks();
+						videoIn->recordstart=get_tick_count();
 					}
 					else {
-						int dur=SDL_GetTicks()-videoIn->recordstart;
+						int dur=get_tick_count()-videoIn->recordstart;
 						printf("\navi recording stopped (%ds)\n",dur/1000);
 						videoIn->recordtime+=dur;
 					}
@@ -877,7 +939,7 @@ static int eventThread(void *data)
 			snprintf(videoIn->status, len,"%s, %02d Fps",title_act[curr_action].title, frmrate);
 
 		}
-		SDL_Delay(50);
+		usleep(50);//SDL_Delay(50);
 		//printf("fp/s %d\n",frmrate);
 	}				//end main loop
 
