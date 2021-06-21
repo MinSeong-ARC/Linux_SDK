@@ -114,10 +114,12 @@ init_videoIn(struct vdIn *vd, char *device, int width, int height, int fps,
     vd->captureFile = NULL;
     vd->bytesWritten = 0;
     vd->framesWritten = 0;
+	printf("before init_v4l2\r\n");
     if (init_v4l2(vd) < 0) {
 	printf(" Init v4L2 failed !! exit fatal\n");
 	goto error;;
     }
+	printf("after init_v4l2\r\n");
     /* alloc a temp buffer to reconstruct the pict */
     vd->framesizeIn = (vd->width * vd->height << 1);
     switch (vd->formatIn) {
@@ -328,18 +330,22 @@ static int init_v4l2(struct vdIn *vd)
 		exit(1);
 	}
 	memset(&vd->cap, 0, sizeof(struct v4l2_capability));
+	printf("init_v4l2 0 : %x\r\n", vd->cap);
 	ret = ioctl(vd->fd, VIDIOC_QUERYCAP, &vd->cap);
 	if (ret < 0) {
 		printf("Error opening device %s: unable to query device.\n",
 				vd->videodevice);
 		goto fatal;
 	}
-
-	if ((vd->cap->capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
+struct v4l2_capability * xxx = (struct v4l2_capability *)vd->cap;
+printf("init_v4l2 1 : %d\r\n", vd->width);
+//printf("init_v4l2 2 : %x\r\n", xxx->version);
+/* 	if ((vd->cap->capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
 		printf("Error opening device %s: video capture not supported.\n",
 				vd->videodevice);
 		goto fatal;;
 	}
+	printf("init_v4l2 3\r\n");
 	if (vd->grabmethod) {
 		if (!(vd->cap->capabilities & V4L2_CAP_STREAMING)) {
 			printf("%s does not support streaming i/o\n", vd->videodevice);
@@ -350,7 +356,7 @@ static int init_v4l2(struct vdIn *vd)
 			printf("%s does not support read i/o\n", vd->videodevice);
 			goto fatal;
 		}
-	}
+	} */
 
 	printf("Stream settings:\n");
 
@@ -390,7 +396,9 @@ static int init_v4l2(struct vdIn *vd)
 
 	// Set pixel format and frame size
 	memset(&vd->fmt, 0, sizeof(struct v4l2_format));
+	printf("YYYYY\r\n");
 	vd->fmt->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	printf("XXXXX\r\n");
 	vd->fmt->fmt.pix.width = vd->width;
 	vd->fmt->fmt.pix.height = vd->height;
 	vd->fmt->fmt.pix.pixelformat = vd->formatIn;
@@ -399,7 +407,7 @@ static int init_v4l2(struct vdIn *vd)
 	if (ret < 0) {
 		perror("Unable to set format");
 		goto fatal;
-	}
+	}	
 	if ((vd->fmt->fmt.pix.width != vd->width) ||
 		(vd->fmt->fmt.pix.height != vd->height)) {
 		printf("  Frame size:   %ux%u (requested size %ux%u is not supported by device)\n",
