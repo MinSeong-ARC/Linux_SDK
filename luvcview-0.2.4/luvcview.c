@@ -33,7 +33,7 @@
 //#include <SDL/SDL_thread.h>
 //#include <SDL/SDL_audio.h>
 //#include <SDL/SDL_timer.h>
-#include <linux/videodev.h>
+//#include <linux/videodev.h>
 #include <linux/videodev2.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
