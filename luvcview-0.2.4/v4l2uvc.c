@@ -340,7 +340,7 @@ static int init_v4l2(struct vdIn *vd)
 struct v4l2_capability * xxx = (struct v4l2_capability *)vd->cap;
 printf("init_v4l2 1 : %d\r\n", vd->width);
 //printf("init_v4l2 2 : %x\r\n", xxx->version);
-/* 	if ((vd->cap->capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
+ 	if ((vd->cap->capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
 		printf("Error opening device %s: video capture not supported.\n",
 				vd->videodevice);
 		goto fatal;;
@@ -356,7 +356,7 @@ printf("init_v4l2 1 : %d\r\n", vd->width);
 			printf("%s does not support read i/o\n", vd->videodevice);
 			goto fatal;
 		}
-	} */
+	}
 
 	printf("Stream settings:\n");
 
