@@ -57,14 +57,14 @@ int check_videoIn(struct vdIn *vd, char *device)
 				vd->videodevice);
 		goto fatal;
 	}
-	if ((vd->cap->capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
+	if ((vd->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
 		printf("Error opening device %s: video capture not supported.\n",
 				vd->videodevice);
 	}
-	if (!(vd->cap->capabilities & V4L2_CAP_STREAMING)) {
+	if (!(vd->cap.capabilities & V4L2_CAP_STREAMING)) {
 		printf("%s does not support streaming i/o\n", vd->videodevice);
 	}
-	if (!(vd->cap->capabilities & V4L2_CAP_READWRITE)) {
+	if (!(vd->cap.capabilities & V4L2_CAP_READWRITE)) {
 		printf("%s does not support read i/o\n", vd->videodevice);
 	}
 	enum_frame_formats(vd->fd, NULL, 0);
@@ -114,12 +114,10 @@ init_videoIn(struct vdIn *vd, char *device, int width, int height, int fps,
     vd->captureFile = NULL;
     vd->bytesWritten = 0;
     vd->framesWritten = 0;
-	printf("before init_v4l2\r\n");
     if (init_v4l2(vd) < 0) {
 	printf(" Init v4L2 failed !! exit fatal\n");
 	goto error;;
     }
-	printf("after init_v4l2\r\n");
     /* alloc a temp buffer to reconstruct the pict */
     vd->framesizeIn = (vd->width * vd->height << 1);
     switch (vd->formatIn) {
@@ -176,7 +174,8 @@ int enum_controls(int vd) //struct vdIn *vd)
          querymenu.index++) {
       if (0 == ioctl (vd, VIDIOC_QUERYMENU, &querymenu)) {
         printf ("  index:%d name:%s\n", querymenu.index, querymenu.name);
-	usleep(10);//SDL_Delay(10);
+	//SDL_Delay(10);
+	usleep(10);
       } else {
         printf ("error getting control menu");
         break;
@@ -195,7 +194,8 @@ int enum_controls(int vd) //struct vdIn *vd)
         continue;
       control_s.id=queryctrl.id;
       ioctl(vd, VIDIOC_G_CTRL, &control_s);
-      usleep(10);//SDL_Delay(10);
+      //SDL_Delay(10);
+	  usleep(10);
       printf (" index:%-10d name:%-32s type:%d min:%-5d max:%-5d step:%-5d def:%-5d now:%d\n",
               queryctrl.id, queryctrl.name, queryctrl.type, queryctrl.minimum,
               queryctrl.maximum, queryctrl.step, queryctrl.default_value, control_s.value);
@@ -218,7 +218,8 @@ int enum_controls(int vd) //struct vdIn *vd)
         continue;
       control_s.id=queryctrl.id;
       ioctl(vd, VIDIOC_G_CTRL, &control_s);
-      usleep(20);//SDL_Delay(20);
+      //SDL_Delay(20);
+	  usleep(20);
       printf (" index:%-10d name:%-32s type:%d min:%-5d max:%-5d step:%-5d def:%-5d now:%d\n",
               queryctrl.id, queryctrl.name, queryctrl.type, queryctrl.minimum,
               queryctrl.maximum, queryctrl.step, queryctrl.default_value, control_s.value);
@@ -256,14 +257,16 @@ int save_controls(int vd)
           continue;
         control_s.id=queryctrl.id;
         ioctl(vd, VIDIOC_G_CTRL, &control_s);
-        usleep(10);//SDL_Delay(10);
+        //SDL_Delay(10);
+		usleep(10);
         fprintf (configfile, "%-10d %-10d # name:%-32s type:%d min:%-5d max:%-5d step:%-5d def:%d\n",
                  queryctrl.id, control_s.value, queryctrl.name, queryctrl.type, queryctrl.minimum,
                  queryctrl.maximum, queryctrl.step, queryctrl.default_value);
         printf ("%-10d %-10d # name:%-32s type:%d min:%-5d max:%-5d step:%-5d def:%d\n",
                 queryctrl.id, control_s.value, queryctrl.name, queryctrl.type, queryctrl.minimum,
                 queryctrl.maximum, queryctrl.step, queryctrl.default_value);
-        usleep(10);//SDL_Delay(10);
+        //SDL_Delay(10);
+		usleep(10);
       }
     }
     for (queryctrl.id = V4L2_CID_PRIVATE_BASE;;
@@ -275,7 +278,8 @@ int save_controls(int vd)
           continue;
         control_s.id=queryctrl.id;
         ioctl(vd, VIDIOC_G_CTRL, &control_s);
-        usleep(10);//SDL_Delay(10);
+        //SDL_Delay(10);
+		usleep(10);
         fprintf (configfile, "%-10d %-10d # name:%-32s type:%d min:%-5d max:%-5d step:%-5d def:%d\n",
                  queryctrl.id, control_s.value, queryctrl.name, queryctrl.type, queryctrl.minimum,
                  queryctrl.maximum, queryctrl.step, queryctrl.default_value);
@@ -289,7 +293,8 @@ int save_controls(int vd)
     }
     fflush(configfile);
     fclose(configfile);
-    usleep(100);//SDL_Delay(100);
+    //SDL_Delay(100);
+	usleep(100);
   }
 }
 
@@ -314,7 +319,8 @@ int load_controls(int vd) //struct vdIn *vd)
           printf("ERROR id:%d val:%d\n", control.id, control.value);
         else
           printf("OK    id:%d val:%d\n", control.id, control.value);
-        usleep(20);//SDL_Delay(20);
+        //SDL_Delay(20);
+		usleep(20);
       }   
     fclose(configfile);
   }
@@ -330,29 +336,25 @@ static int init_v4l2(struct vdIn *vd)
 		exit(1);
 	}
 	memset(&vd->cap, 0, sizeof(struct v4l2_capability));
-	printf("init_v4l2 0 : %x\r\n", vd->cap);
 	ret = ioctl(vd->fd, VIDIOC_QUERYCAP, &vd->cap);
 	if (ret < 0) {
 		printf("Error opening device %s: unable to query device.\n",
 				vd->videodevice);
 		goto fatal;
 	}
-struct v4l2_capability * xxx = (struct v4l2_capability *)vd->cap;
-printf("init_v4l2 1 : %d\r\n", vd->width);
-//printf("init_v4l2 2 : %x\r\n", xxx->version);
- 	if ((vd->cap->capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
+
+	if ((vd->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0) {
 		printf("Error opening device %s: video capture not supported.\n",
 				vd->videodevice);
 		goto fatal;;
 	}
-	printf("init_v4l2 3\r\n");
 	if (vd->grabmethod) {
-		if (!(vd->cap->capabilities & V4L2_CAP_STREAMING)) {
+		if (!(vd->cap.capabilities & V4L2_CAP_STREAMING)) {
 			printf("%s does not support streaming i/o\n", vd->videodevice);
 			goto fatal;
 		}
 	} else {
-		if (!(vd->cap->capabilities & V4L2_CAP_READWRITE)) {
+		if (!(vd->cap.capabilities & V4L2_CAP_READWRITE)) {
 			printf("%s does not support read i/o\n", vd->videodevice);
 			goto fatal;
 		}
@@ -396,26 +398,24 @@ printf("init_v4l2 1 : %d\r\n", vd->width);
 
 	// Set pixel format and frame size
 	memset(&vd->fmt, 0, sizeof(struct v4l2_format));
-	printf("YYYYY\r\n");
-	vd->fmt->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	printf("XXXXX\r\n");
-	vd->fmt->fmt.pix.width = vd->width;
-	vd->fmt->fmt.pix.height = vd->height;
-	vd->fmt->fmt.pix.pixelformat = vd->formatIn;
-	vd->fmt->fmt.pix.field = V4L2_FIELD_ANY;
+	vd->fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	vd->fmt.fmt.pix.width = vd->width;
+	vd->fmt.fmt.pix.height = vd->height;
+	vd->fmt.fmt.pix.pixelformat = vd->formatIn;
+	vd->fmt.fmt.pix.field = V4L2_FIELD_ANY;
 	ret = ioctl(vd->fd, VIDIOC_S_FMT, &vd->fmt);
 	if (ret < 0) {
 		perror("Unable to set format");
 		goto fatal;
-	}	
-	if ((vd->fmt->fmt.pix.width != vd->width) ||
-		(vd->fmt->fmt.pix.height != vd->height)) {
+	}
+	if ((vd->fmt.fmt.pix.width != vd->width) ||
+		(vd->fmt.fmt.pix.height != vd->height)) {
 		printf("  Frame size:   %ux%u (requested size %ux%u is not supported by device)\n",
-			vd->fmt->fmt.pix.width, vd->fmt->fmt.pix.height, vd->width, vd->height);
-		vd->width = vd->fmt->fmt.pix.width;
-		vd->height = vd->fmt->fmt.pix.height;
+			vd->fmt.fmt.pix.width, vd->fmt.fmt.pix.height, vd->width, vd->height);
+		vd->width = vd->fmt.fmt.pix.width;
+		vd->height = vd->fmt.fmt.pix.height;
 		/* look the format is not part of the deal ??? */
-		//vd->formatIn = vd->fmt->fmt.pix.pixelformat;
+		//vd->formatIn = vd->fmt.fmt.pix.pixelformat;
 	}
 	else {
 		printf("  Frame size:   %dx%d\n", vd->width, vd->height);
@@ -454,9 +454,9 @@ printf("init_v4l2 1 : %d\r\n", vd->width);
 
 	/* request buffers */
 	memset(&vd->rb, 0, sizeof(struct v4l2_requestbuffers));
-	vd->rb->count = NB_BUFFER;
-	vd->rb->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	vd->rb->memory = V4L2_MEMORY_MMAP;
+	vd->rb.count = NB_BUFFER;
+	vd->rb.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	vd->rb.memory = V4L2_MEMORY_MMAP;	
 
 	ret = ioctl(vd->fd, VIDIOC_REQBUFS, &vd->rb);
 	if (ret < 0) {
@@ -466,20 +466,20 @@ printf("init_v4l2 1 : %d\r\n", vd->width);
 	/* map the buffers */
 	for (i = 0; i < NB_BUFFER; i++) {
 		memset(&vd->buf, 0, sizeof(struct v4l2_buffer));
-		vd->buf->index = i;
-		vd->buf->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		vd->buf->memory = V4L2_MEMORY_MMAP;
+		vd->buf.index = i;
+		vd->buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		vd->buf.memory = V4L2_MEMORY_MMAP;
 		ret = ioctl(vd->fd, VIDIOC_QUERYBUF, &vd->buf);
 		if (ret < 0) {
 			perror("Unable to query buffer");
 			goto fatal;
 		}
 		if (debug)
-			printf("length: %u offset: %u\n", vd->buf->length,
-					vd->buf->m.offset);
+			printf("length: %u offset: %u\n", vd->buf.length,
+					vd->buf.m.offset);
 		vd->mem[i] = mmap(0 /* start anywhere */ ,
-				vd->buf->length, PROT_READ, MAP_SHARED, vd->fd,
-				vd->buf->m.offset);
+				vd->buf.length, PROT_READ, MAP_SHARED, vd->fd,
+				vd->buf.m.offset);
 		if (vd->mem[i] == MAP_FAILED) {
 			perror("Unable to map buffer");
 			goto fatal;
@@ -490,9 +490,9 @@ printf("init_v4l2 1 : %d\r\n", vd->width);
 	/* Queue the buffers. */
 	for (i = 0; i < NB_BUFFER; ++i) {
 		memset(&vd->buf, 0, sizeof(struct v4l2_buffer));
-		vd->buf->index = i;
-		vd->buf->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		vd->buf->memory = V4L2_MEMORY_MMAP;
+		vd->buf.index = i;
+		vd->buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		vd->buf.memory = V4L2_MEMORY_MMAP;
 		ret = ioctl(vd->fd, VIDIOC_QBUF, &vd->buf);
 		if (ret < 0) {
 			perror("Unable to queue buffer");
@@ -543,8 +543,8 @@ int uvcGrab(struct vdIn *vd)
 	if (video_enable(vd))
 	    goto err;
     memset(&vd->buf, 0, sizeof(struct v4l2_buffer));
-    vd->buf->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    vd->buf->memory = V4L2_MEMORY_MMAP;
+    vd->buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    vd->buf.memory = V4L2_MEMORY_MMAP;
     ret = ioctl(vd->fd, VIDIOC_DQBUF, &vd->buf);
     if (ret < 0) {
 	perror("Unable to dequeue buffer");
@@ -552,7 +552,7 @@ int uvcGrab(struct vdIn *vd)
     }
 
 	/* Capture a single raw frame */
-	if (vd->rawFrameCapture && vd->buf->bytesused > 0) {
+	if (vd->rawFrameCapture && vd->buf.bytesused > 0) {
 		FILE *frame = NULL;
 		char filename[13];
 		int ret;
@@ -570,14 +570,14 @@ int uvcGrab(struct vdIn *vd)
 		}
 		
 		/* Write the raw data to the file */
-		ret = fwrite(vd->mem[vd->buf->index], vd->buf->bytesused, 1, frame);
+		ret = fwrite(vd->mem[vd->buf.index], vd->buf.bytesused, 1, frame);
 		if(ret < 1) {
 			perror("Unable to write to file");
 			goto end_capture;
 		}
-		printf("Saved raw frame to %s (%u bytes)\n", filename, vd->buf->bytesused);
+		printf("Saved raw frame to %s (%u bytes)\n", filename, vd->buf.bytesused);
 		if(vd->rawFrameCapture == 2) {
-			vd->rfsBytesWritten += vd->buf->bytesused;
+			vd->rfsBytesWritten += vd->buf.bytesused;
 			vd->rfsFramesWritten++;
 		}
 
@@ -591,9 +591,9 @@ end_capture:
    
 
 	/* Capture raw stream data */
-	if (vd->captureFile && vd->buf->bytesused > 0) {
+	if (vd->captureFile && vd->buf.bytesused > 0) {
 		int ret;
-		ret = fwrite(vd->mem[vd->buf->index], vd->buf->bytesused, 1, vd->captureFile);
+		ret = fwrite(vd->mem[vd->buf.index], vd->buf.bytesused, 1, vd->captureFile);
 		if (ret < 1) {
 			perror("Unable to write raw stream to file");
 			fprintf(stderr, "Stream capturing terminated.\n");
@@ -603,20 +603,21 @@ end_capture:
 			vd->bytesWritten = 0;
 		} else {
 			vd->framesWritten++;
-			vd->bytesWritten += vd->buf->bytesused;
+			vd->bytesWritten += vd->buf.bytesused;
 			if (debug)
-				printf("Appended raw frame to stream file (%u bytes)\n", vd->buf->bytesused);
+				printf("Appended raw frame to stream file (%u bytes)\n", vd->buf.bytesused);
+			printf("%d, %d\r\n", vd->framesWritten, vd->bytesWritten);
 		}
 	}
 
     switch (vd->formatIn) {
     case V4L2_PIX_FMT_MJPEG:
-        if(vd->buf->bytesused <= HEADERFRAME1) {	/* Prevent crash on empty image */
+        if(vd->buf.bytesused <= HEADERFRAME1) {	/* Prevent crash on empty image */
 /*	    if(debug)*/
 	        printf("Ignoring empty buffer ...\n");
 	    return 0;
         }
-	memcpy(vd->tmpbuffer, vd->mem[vd->buf->index],vd->buf->bytesused);
+	memcpy(vd->tmpbuffer, vd->mem[vd->buf.index],vd->buf.bytesused);
 	 /* avi recording is toggled on */
     if (vd->toggleAvi) {
         /* if vd->avifile is NULL, then we need to initialize it */
@@ -636,7 +637,7 @@ end_capture:
         } else {
         /* if we have a valid avifile, record the frame to it */
             AVI_write_frame(vd->avifile, vd->tmpbuffer,
-                vd->buf->bytesused, vd->framecount);
+                vd->buf.bytesused, vd->framecount);
             vd->framecount++;
         }
     }
@@ -646,15 +647,15 @@ end_capture:
 	    goto err;
 	}
 	if (debug)
-	    printf("bytes in used %d\n", vd->buf->bytesused);
+	    printf("bytes in used %d\n", vd->buf.bytesused);
 	break;
     case V4L2_PIX_FMT_YUYV:
-	if (vd->buf->bytesused > vd->framesizeIn)
-	    memcpy(vd->framebuffer, vd->mem[vd->buf->index],
+	if (vd->buf.bytesused > vd->framesizeIn)
+	    memcpy(vd->framebuffer, vd->mem[vd->buf.index],
 		   (size_t) vd->framesizeIn);
 	else
-	    memcpy(vd->framebuffer, vd->mem[vd->buf->index],
-		   (size_t) vd->buf->bytesused);
+	    memcpy(vd->framebuffer, vd->mem[vd->buf.index],
+		   (size_t) vd->buf.bytesused);
 	break;
     default:
 	goto err;

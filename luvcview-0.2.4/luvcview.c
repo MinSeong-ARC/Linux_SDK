@@ -528,8 +528,8 @@ int main(int argc, char *argv[])
 	lasttime = get_tick_count();
 	creatButt(videoIn->width, 32);
 	//SDL_LockYUVOverlay(overlay);
-	memcpy(p + (videoIn->width * (videoIn->height) * 2), YUYVbutt,
-			videoIn->width * 64);
+	/* memcpy(p + (videoIn->width * (videoIn->height) * 2), YUYVbutt,
+			videoIn->width * 64); */
 	//SDL_UnlockYUVOverlay(overlay);
 	/* initialize thread data */
 	//ptdata.ptscreen = &pscreen;
@@ -565,7 +565,7 @@ int main(int argc, char *argv[])
 		if (videoIn->getPict) { 
 			switch(videoIn->formatIn){
 				case V4L2_PIX_FMT_MJPEG:
-					get_picture(videoIn->tmpbuffer,videoIn->buf->bytesused);
+					get_picture(videoIn->tmpbuffer,videoIn->buf.bytesused);
 					break;
 				case V4L2_PIX_FMT_YUYV:
 					get_pictureYV2(videoIn->framebuffer,videoIn->width,videoIn->height);
