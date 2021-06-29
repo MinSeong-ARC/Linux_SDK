@@ -281,8 +281,8 @@ int main(int argc, char *argv[])
 	int format = V4L2_PIX_FMT_MJPEG;
 	int i;
 	int grabmethod = 1;
-	int width = 640;
-	int height = 480;
+	int width = 1920;
+	int height = 1080;
 	int fps = 30;
 	unsigned char frmrate = 0;
 	char *avifilename = NULL;
